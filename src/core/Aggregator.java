@@ -14,6 +14,8 @@ package net.opentsdb.core;
 
 import java.util.NoSuchElementException;
 
+import net.opentsdb.core.Aggregators.Interpolation;
+
 /**
  * A function capable of aggregating multiple {@link DataPoints} together.
  * <p>
@@ -68,7 +70,24 @@ public interface Aggregator {
     double nextDoubleValue();
 
   }
+  
+  public interface Strings {
 
+	    /**
+	     * Returns {@code true} if this sequence has more values.
+	     * {@code false} otherwise.
+	     */
+	    boolean hasNextValue();
+
+	    /**
+	     * Returns the next {@code String} value in this sequence.
+	     * @throws NoSuchElementException if calling {@link #hasNextValue} returns
+	     * {@code false}.
+	     */
+	    String nextStringValue();
+
+	  }
+  
   /**
    * Aggregates a sequence of {@code long}s.
    * @param values The sequence to aggregate.
@@ -83,4 +102,13 @@ public interface Aggregator {
    */
   double runDouble(Doubles values);
 
+  /** 
+   * Returns the interpolation method to use when working with data points
+   * across time series.
+   * @return The interpolation method to use
+   */
+  
+  String runString(Strings values);
+  
+  Interpolation interpolationMethod();
 }

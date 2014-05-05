@@ -20,11 +20,11 @@ package net.opentsdb.core;
 public interface DataPoint {
 
   /**
-   * Returns the timestamp (in seconds) associated with this data point.
+   * Returns the timestamp (in milliseconds) associated with this data point.
    * @return A strictly positive, 32 bit integer.
    */
   long timestamp();
-
+  
   /**
    * Tells whether or not the this data point is a value of integer type.
    * @return {@code true} if the {@code i}th value is of integer type,
@@ -43,7 +43,12 @@ public interface DataPoint {
    * @throws ClassCastException if the {@code isInteger() == true}.
    */
   double doubleValue();
-
+  
+  /**
+   * Returns the value of the this data point as a {@code String}.
+   */
+  String stringValue();
+  
   /**
    * Returns the value of the this data point as a {@code double}, even if
    * it's a {@code long}.
