@@ -107,7 +107,11 @@ final class DataPointsIterator implements SeekableView, DataPoint {
   public boolean isInteger() {
     return dp.isInteger(index);
   }
-
+  
+  public boolean isString() {
+	    return dp.isString(index);
+  }
+  
   public long longValue() {
     return dp.longValue(index);
   }
@@ -117,7 +121,7 @@ final class DataPointsIterator implements SeekableView, DataPoint {
   }
   
   public String stringValue() {
-	  return "";
+	  return dp.stringValue(index);
   }
   public double toDouble() {
     return isInteger() ? longValue() : doubleValue();

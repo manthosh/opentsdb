@@ -31,7 +31,8 @@ public interface DataPoint {
    * {@code false} if it's of doubleing point type.
    */
   boolean isInteger();
-
+  
+  boolean isString();
   /**
    * Returns the value of the this data point as a {@code long}.
    * @throws ClassCastException if the {@code isInteger() == false}.

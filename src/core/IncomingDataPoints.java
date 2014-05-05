@@ -476,7 +476,12 @@ final class IncomingDataPoints implements WritableDataPoints {
 
   public boolean isInteger(final int i) {
     checkIndex(i);
-    return (qualifiers[i] & Const.FLAG_FLOAT) == 0x0;
+    return !((qualifiers[i] & Const.FLAG_STRING) == Const.FLAG_STRING) && (qualifiers[i] & Const.FLAG_FLOAT) == 0x0;
+  }
+  
+  public boolean isString(final int i) {
+	    checkIndex(i);
+	    return (qualifiers[i] & Const.FLAG_STRING) == Const.FLAG_STRING;
   }
 
   public long longValue(final int i) {

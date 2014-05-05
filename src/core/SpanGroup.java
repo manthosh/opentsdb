@@ -403,6 +403,10 @@ final class SpanGroup implements DataPoints {
     return getDataPoint(i).isInteger();
   }
 
+  public boolean isString(final int i) {
+	    return getDataPoint(i).isString();
+  }
+  
   public double doubleValue(final int i) {
     return getDataPoint(i).doubleValue();
   }
@@ -535,13 +539,14 @@ final class SpanGroup implements DataPoints {
 
     /** Extra bit we set on the timestamp of floating point values. */
     private static final long FLAG_FLOAT = 0x8000000000000000L;
-
+    
+    private static final long FLAG_STRING = 0x4000000000000000L;
     /** Mask to use in order to get rid of the flag above.
      * This value also conveniently represents the largest timestamp we can
      * possibly store, provided that the most significant bit is reserved by
      * FLAG_FLOAT.
      */
-    private static final long TIME_MASK  = 0x7FFFFFFFFFFFFFFFL;
+    private static final long TIME_MASK  = 0x3FFFFFFFFFFFFFFFL;
 
     /** Interpolation method to use when aggregating time series */
     private final Interpolation method;
@@ -660,7 +665,11 @@ final class SpanGroup implements DataPoints {
      */
     private void putDataPoint(final int i, final DataPoint dp) {
       timestamps[i] = dp.timestamp();
-      if (dp.isInteger()) {
+      if(dp.isString()) {
+    	  timestamps[i] |= FLAG_STRING;
+    	  values[i] = 0;
+      }
+      else if (dp.isInteger()) {
         //LOG.debug("Putting #" + i + " (long) " + dp.longValue()
         //          + " @ time " + dp.timestamp());
         values[i] = dp.longValue();
@@ -806,6 +815,9 @@ final class SpanGroup implements DataPoints {
         // An rate can never be precisely represented without floating point.
         return false;
       }
+      if(isString()){
+    	  return false;
+      }
       // If at least one of the values we're going to aggregate or interpolate
       // with is a float, we have to convert everything to a float.
       for (int i = timestamps.length - 1; i >= 0; i--) {
@@ -816,6 +828,21 @@ final class SpanGroup implements DataPoints {
       return true;
     }
 
+    public boolean isString() {
+        if (rate) {
+          // An rate can never be precisely represented without floating point.
+          return false;
+        }
+        // If at least one of the values we're going to aggregate or interpolate
+        // with is a String, we have to convert everything to a String.
+        for (int i = timestamps.length - 1; i >= 0; i--) {
+          if ((timestamps[i] & FLAG_STRING) == FLAG_STRING) {
+            return true;
+          }
+        }
+        return false;
+      }
+    
     public long longValue() {
       if (isInteger()) {
         pos = -1;
@@ -830,7 +857,7 @@ final class SpanGroup implements DataPoints {
     }
 
     public double doubleValue() {
-      if (!isInteger()) {
+      if (!isString() && !isInteger()) {
         pos = -1;
         final double value = aggregator.runDouble(this);
         //LOG.debug("aggregator returned " + value);

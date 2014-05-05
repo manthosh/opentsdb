@@ -272,7 +272,22 @@ final class Span implements DataPoints {
     final long idxoffset = getIdxOffsetFor(i);
     final int idx = (int) (idxoffset >>> 32);
     final int offset = (int) (idxoffset & 0x00000000FFFFFFFF);
-    return rows.get(idx).isInteger(offset);
+    return !(rows.get(idx).isString(offset)) && rows.get(idx).isInteger(offset);
+  }
+  
+  /**
+   * Determines whether or not the value at index {@code i} is a String
+   * @param i A 0 based index incremented per the number of data points in the
+   * span.
+   * @return True if the value is an integer, false if it's a floating point
+   * @throws IndexOutOfBoundsException if the index would be out of bounds
+   */
+  public boolean isString(final int i) {
+    checkRowOrder();
+    final long idxoffset = getIdxOffsetFor(i);
+    final int idx = (int) (idxoffset >>> 32);
+    final int offset = (int) (idxoffset & 0x00000000FFFFFFFF);
+    return rows.get(idx).isString(offset);
   }
 
   /**
@@ -450,9 +465,11 @@ final class Span implements DataPoints {
 
     /** Extra bit we set on the timestamp of floating point values. */
     private static final long FLAG_FLOAT = 0x8000000000000000L;
-
+    
+    /** Extra bit we set on the timestamp of String values. */
+    private static final long FLAG_STRING = 0x4000000000000000L;
     /** Mask to use in order to get rid of the flag above. */
-    private static final long TIME_MASK  = 0x7FFFFFFFFFFFFFFFL;
+    private static final long TIME_MASK  = 0x3FFFFFFFFFFFFFFFL;
 
     /** The "sampling" interval, in milliseconds. */
     private final long interval;
@@ -530,12 +547,14 @@ final class Span implements DataPoints {
       time = current_row.timestamp() + interval;  // end of interval
       //LOG.info("End of interval: " + time + " Interval: " + interval);
       boolean integer = true;
+      boolean string = false;
       int npoints = 0;
       do {
         npoints++;
         newtime += current_row.timestamp();
         //LOG.debug("Downsampling @ time " + current_row.timestamp());
         integer &= current_row.isInteger();
+        string &= current_row.isString();
       } while (moveToNext() && current_row.timestamp() < time);
       newtime /= npoints;
 
@@ -548,7 +567,11 @@ final class Span implements DataPoints {
 
       // Compute `value'.  This will rely on `time' containing the end time of
       // this interval...
-      if (integer) {
+      if(string) {
+    	  value = 0;
+    	  time |= FLAG_STRING;
+      }
+      else if (integer) {
         value = downsampler.runLong(this);
       } else {
         value = Double.doubleToRawLongBits(downsampler.runDouble(this));
@@ -590,7 +613,11 @@ final class Span implements DataPoints {
     }
 
     public boolean isInteger() {
-      return (time & FLAG_FLOAT) == 0;
+      return !isString() && ((time & FLAG_FLOAT) == 0);
+    }
+    
+    public boolean isString() {
+    	return (time & FLAG_STRING) == FLAG_STRING;
     }
     
     public long longValue() {
@@ -601,7 +628,7 @@ final class Span implements DataPoints {
     }
 
     public double doubleValue() {
-      if (!isInteger()) {
+      if (!isString() && !isInteger()) {
         return Double.longBitsToDouble(value);
       }
       throw new ClassCastException("this value is not a float in " + this);

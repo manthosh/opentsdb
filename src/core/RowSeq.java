@@ -233,29 +233,17 @@ final class RowSeq implements DataPoints {
    */
   
   static long extractIntegerValue(final byte[] values,
-          final int value_idx,
-          final byte flags) {
-	  return extractIntegerValue(values, value_idx, flags, false);
-  }
-  
-  static long extractIntegerValue(final byte[] values,
                                   final int value_idx,
-                                  final byte flags,
-                                  final boolean isString) {
+                                  final byte flags) {
     switch (flags & Const.LENGTH_MASK) {
       case 7: return Bytes.getLong(values, value_idx);
       case 3: return Bytes.getInt(values, value_idx);
       case 1: return Bytes.getShort(values, value_idx);
       case 0: return values[value_idx];
     }
-    if(!isString) {
     	throw new IllegalDataException("Integer value @ " + value_idx
                                    + " not on 8/4/2/1 bytes in "
                                    + Arrays.toString(values));
-    }
-    else {
-    	return 0;
-    }
   }
 
   /**
@@ -268,27 +256,15 @@ final class RowSeq implements DataPoints {
    * @throws IllegalDataException if the data is malformed
    */
   static double extractFloatingPointValue(final byte[] values,
-          final int value_idx,
-          final byte flags) {
-	  return extractFloatingPointValue(values, value_idx, flags, false);
-  }
-  
-  static double extractFloatingPointValue(final byte[] values,
                                           final int value_idx,
-                                          final byte flags,
-                                          final boolean isString) {
+                                          final byte flags) {
     switch (flags & Const.LENGTH_MASK) {
       case 7: return Double.longBitsToDouble(Bytes.getLong(values, value_idx));
       case 3: return Float.intBitsToFloat(Bytes.getInt(values, value_idx));
     }
-    if(!isString) {
     	throw new IllegalDataException("Floating point value @ " + value_idx
                                    + " not on 8 or 4 bytes in "
                                    + Arrays.toString(values));
-    }
-    else {
-    	return 0;
-    }
   }
   
   static String extractStringValue(final byte[] values,
@@ -435,10 +411,17 @@ final class RowSeq implements DataPoints {
 
   public boolean isInteger(final int i) {
     checkIndex(i);
-    return (Internal.getFlagsFromQualifier(qualifiers, i) & 
+    return !((Internal.getFlagsFromQualifier(qualifiers, i) & 
+	        Const.FLAG_STRING) == Const.FLAG_STRING) && (Internal.getFlagsFromQualifier(qualifiers, i) & 
         Const.FLAG_FLOAT) == 0x0;
   }
-
+  
+  public boolean isString(final int i) {
+	    checkIndex(i);
+	    return (Internal.getFlagsFromQualifier(qualifiers, i) & 
+	        Const.FLAG_STRING) == Const.FLAG_STRING;
+  }
+  
   public long longValue(int i) {
     if (!isInteger(i)) {
       throw new ClassCastException("value #" + i + " is not a long in " + this);
@@ -641,17 +624,17 @@ final class RowSeq implements DataPoints {
 
     public boolean isInteger() {
       assert qual_index > 0: "not initialized: " + this;
-      return (qualifier & Const.FLAG_FLOAT) == 0x0;
+      return !isString() && ((qualifier & Const.FLAG_FLOAT) == 0x0);
     }
     
-    private boolean isString() {
+    public boolean isString() {
     	assert qual_index > 0: "not initialized: " + this;
-    	if(isTimeInMilliSeconds) {
+    	//if(isTimeInMilliSeconds) {
     		return (qualifier & Const.FLAG_STRING) == Const.FLAG_STRING;
-    	}
-    	else {
+    	//}
+    	/*else {
     		return false;
-    	}
+    	}*/
     }
     
     public long longValue() {
@@ -661,7 +644,7 @@ final class RowSeq implements DataPoints {
       }
       final byte flags = (byte) qualifier;
       final byte vlen = (byte) ((flags & Const.LENGTH_MASK) + 1);
-      return extractIntegerValue(values, value_index - vlen, flags, isString());
+      return extractIntegerValue(values, value_index - vlen, flags);
     }
     
     public String stringValue() {
@@ -681,13 +664,13 @@ final class RowSeq implements DataPoints {
     }
     
     public double doubleValue() {
-      if (isInteger()) {
+      if (isString() || isInteger()) {
         throw new ClassCastException("value @"
           + qual_index + " is not a float in " + this);
       }
       final byte flags = (byte) qualifier;
       final byte vlen = (byte) ((flags & Const.LENGTH_MASK) + 1);
-      return extractFloatingPointValue(values, value_index - vlen, flags, isString());
+      return extractFloatingPointValue(values, value_index - vlen, flags);
     }
 
     public double toDouble() {

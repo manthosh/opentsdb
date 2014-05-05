@@ -154,7 +154,8 @@ public interface DataPoints extends Iterable<DataPoint> {
    * <code>[0, {@link #size} - 1]</code>
    */
   boolean isInteger(int i);
-
+  
+  boolean isString(int i);
   /**
    * Returns the value of the {@code i}th data point as a long.
    * The first data point has index 0.
@@ -185,6 +186,19 @@ public interface DataPoints extends Iterable<DataPoint> {
    */
   double doubleValue(int i);
   
+  /**
+   * Returns the value of the {@code i}th data point as a String.
+   * The first data point has index 0.
+   * <p>
+   * This method must be implemented in
+   * <code>O({@link #aggregatedSize})</code> or better.
+   * Use {@link #iterator} to get successive {@code O(1)} accesses.
+   * @see #iterator
+   * @throws IndexOutOfBoundsException if {@code i} is not in the range
+   * <code>[0, {@link #size} - 1]</code>
+   * @throws ClassCastException if the
+   * <code>{@link #isInteger isInteger(i)} == true</code>.
+   */
   String stringValue(int i);
 
 }
